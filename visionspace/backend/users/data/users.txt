@@ -1,0 +1,6 @@
+Иванов:Иван:ivanov@mail.com:12345qwerty
+Петров:Сергей:petrov@gmail.com:serg7890
+Сидоров:Михаил:sid_mike@yandex.ru:password2023
+Кузнецов:Алексей:alex_kuz@gmail.com:Alex1987
+Смирнова:Анна:anna_smirnova@mail.ru:Anya!4567
+Иванов:Иван:ivanov@mail.com:12345qwerty
