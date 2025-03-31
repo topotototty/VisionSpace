@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f6f6f6;
+            color: black;
+            font-size: 1.1rem;
+        }
+
+        .wrapper {
+            display: flex;
+            border: 1px solid #ccc;
+            width: max-content;
+            height: max-content;
+            padding: 0.8rem 1.2rem;
+        }
+
+
+        table {
+            border-collapse: collapse;
+            width: max(100%, 600px);
+            height: max-content;
+        }
+
+        table td {
+            padding: 0.6rem;
+            text-align: left;
+        }
+
+        .table-header {
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .table-header span {
+            font-weight: normal;
+            margin: 0;
+            color: #767676;
+        }
+
+        .join {
+            border: none;
+            background-color: #325df9;
+            color: whitesmoke;
+            padding: 0.5rem 1rem;
+            font-weight: 700;
+            font-size: medium;
+            outline: none;
+        }
+
+        a {
+            text-decoration: none;
+            color: #767676;
+        }
+
+        .buttons {
+            display: grid;
+            margin-top: 0.5rem;
+            grid-template-columns: repeat(3, max-content);
+        }
+
+        .buttons button {
+            border: 1px solid #ccc;
+            background-color: inherit;
+            padding: 0.5rem 1rem;
+            font-size: medium;
+            outline: none;
+        }
+    </style>
+    <title>Invitation</title>
+</head>
+<body>
+    <div class="wrapper">
+        <table>
+            <tbody>
+                <tr>
+                    <td>
+                        <span class="table-header">Когда</span>
+                        <div>
+                            <p>четверг, 10 окт 2024 * 12:30 - 13:00 (Москва, стандартное время - Москва)</p>
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            <button class="join">Присоединиться в Vision</button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span class="table-header">Гости</span>
+                        <div>
+                            <p>Iris - организатор</p>
+                            <p>aslkdmnalsd@otus.ru</p>
+                            <p>anton@api-fac.ru</p>
+                            <a href="#" style="color: #325df9; font-weight: 700;">Посмотреть сведения обо всех гостях</a>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="table-header">Ссылка на встречу</span>
+                        <div>
+                            <a href="#">
+                                vision.api-factory.ru/meeting/{{conference_id}}
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span class="table-header">
+                            Отправьте ответ
+                            <span>
+                                пользователю anton@api-fac.ru
+                            </span>
+                        </span>
+                        <div class="buttons">
+                            <button>Да</button>
+                            <button>Нет</button>
+                            <button>Может быть</button>
+                        </div>
+                    </td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
