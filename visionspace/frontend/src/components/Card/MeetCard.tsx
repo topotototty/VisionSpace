@@ -6,7 +6,7 @@ const MeetingCard = ({conference, onClick, isSelected}: {
     conference: IConference,
     onClick: () => void,
     isSelected: boolean
-}) => {
+}) => { 
 
     const timeStart = new Date(conference.started_at).toLocaleTimeString(
         "ru-RU", {

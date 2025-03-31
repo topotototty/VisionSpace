@@ -4,15 +4,19 @@ export interface IUserRole {
     role: "MEMBER" | 'MODERATOR' | 'TECH_SUPPORT'
 }
 
-export interface IUser {
-    id: string
-    firstname: string
-    lastname: string
-    email: string
-    last_login: string
-    role: string
-}
 
+// src/models/User.ts
+export interface IUser {
+    id: string;
+    firstname: string;
+    lastname: string;
+    email: string;
+    role: string;
+    last_login?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  }
+  
 
 export interface ILoginProps {
     email: string;

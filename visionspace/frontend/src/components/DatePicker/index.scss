@@ -109,3 +109,9 @@ $date-picker-item-weekday-font-size: 0.875rem;
   border: $date-picker-item-current-border;
   background-color: $date-picker-item-current-bg;
 }
+
+.date-picker-item-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}

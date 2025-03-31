@@ -12,16 +12,16 @@ urlpatterns = [
     path("auth/token/", views.refresh_token_view,
          name="update token"),
 
-#     # Endpoints для keycloak authentication
-#     path("auth/providers/keycloak/login/", views.keycloak_login_view,
-#          name="keycloak_login"),
-
     # Endpoints для профиля
     path("profile/", views.profile_view, name="profile"),
     path("profile/search/", views.profile_search_view, name="profile_search"),
     path("profile/<int:pk>/", views.profile_user_view, name="profile"),
+    
+    path("me/activities/", views.user_activity_view, name='user-activities'),
+    path("profile/change-password/", views.change_password_view, name="change_password"),
+    path("profile/reset-password/", views.reset_password_simple_view, name="reset-password"),
+
 
     # Endpoint для импорта юзеров из файла в БД
-    path('import/file/', views.FileUploadView.as_view(),
-         name='import from file')
+    path('import/file/', views.FileUploadView.as_view(), name='import from file'),
 ]

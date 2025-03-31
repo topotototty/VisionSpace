@@ -133,6 +133,17 @@ const SignIn = () => {
                                 Зарегистрируйтесь
                             </button>
                         </p>
+
+                        <p className="text-sm text-center mt-2">
+                            <button
+                                type="button"
+                                onClick={() => navigate("/forgot-password")}
+                                className="text-blue-500 hover:underline cursor-pointer"
+                            >
+                                Забыли пароль?
+                            </button>
+                        </p>
+
                     </>
                 )}
             </form>

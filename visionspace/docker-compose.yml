@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   backend:
     build: ./backend
@@ -9,17 +10,20 @@ services:
       - ./backend/vision/.env
     depends_on:
       - db
+    volumes:
+      - staticfiles:/app/staticfiles
 
   frontend:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
     container_name: frontend
     ports:
       - "80:80"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     depends_on:
       - backend
+    volumes:
+      - staticfiles:/static
 
   db:
     image: postgres:15
@@ -33,8 +37,6 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    command: ["postgres", "-c", "log_statement=all"]
-
 
   minio:
     image: minio/minio
@@ -49,76 +51,7 @@ services:
     volumes:
       - minio_data:/data
 
-  jitsi-web:
-    image: jitsi/web:stable-8719
-    container_name: jitsi-web
-    restart: always
-    ports:
-      - "8443:8443"
-      - "4443:4443"
-      - "10000:10000/udp"
-    environment:
-      - ENABLE_AUTH=1
-      - AUTH_TYPE=jwt
-      - JWT_APP_ID=${JITSI_ISS}
-      - JWT_APP_SECRET=${JITSI_SECRET}
-      - XMPP_DOMAIN=prosody
-      - XMPP_SERVER=prosody
-      - PUBLIC_URL=https://jitsi-web
-      - JVB_BREWERY_MUC=jvbbrewery
-      - JICOFO_COMPONENT_SECRET=supersecret
-      - JVB_AUTH_USER=jvb
-      - JVB_AUTH_PASSWORD=your_secure_password
-      - JIBRI_BREWERY_MUC=jibribrewery
-      - JIBRI_PENDING_TIMEOUT=90
-    depends_on:
-      - prosody
-      - jvb
-      - jicofo
-
-  prosody:
-    image: jitsi/prosody:stable-8719
-    container_name: jitsi-prosody
-    restart: always
-    environment:
-      - XMPP_DOMAIN=prosody
-      - XMPP_AUTH_DOMAIN=auth.prosody
-      - XMPP_GUEST_DOMAIN=guest.prosody
-      - XMPP_INTERNAL_MUC_DOMAIN=internal-muc.prosody
-      - XMPP_MUC_DOMAIN=muc.prosody
-      - XMPP_RECORDER_DOMAIN=recorder.prosody
-      - AUTH_TYPE=jwt
-      - JWT_APP_ID=${JITSI_ISS}
-      - JWT_APP_SECRET=${JITSI_SECRET}
-
-  jvb:
-    image: jitsi/jvb:stable-8719
-    container_name: jitsi-jvb
-    restart: always
-    environment:
-      - XMPP_SERVER=prosody
-      - XMPP_DOMAIN=prosody
-      - JVB_AUTH_USER=jvb
-      - JVB_AUTH_PASSWORD=your_secure_password
-    depends_on:
-      - prosody
-
-  jicofo:
-    image: jitsi/jicofo:stable-8719
-    container_name: jitsi-jicofo
-    restart: always
-    environment:
-      - XMPP_SERVER=prosody
-      - XMPP_DOMAIN=prosody
-      - JICOFO_COMPONENT_SECRET=supersecret
-      - JICOFO_AUTH_USER=focus
-      - JICOFO_AUTH_PASSWORD=your_secure_password
-    depends_on:
-      - prosody
-
 volumes:
   pgdata:
   minio_data:
-  prosody_config:
-  
-
+  staticfiles:

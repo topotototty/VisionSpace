@@ -100,6 +100,12 @@ export const jistiInterfaceConfigOverwrite = {
 	DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
 	DISPLAY_WELCOME_FOOTER: false,
 	SHOW_PROMOTIONAL_CLOSE_PAGE: false,
+
+
+    TOOLBAR_BUTTONS: [
+        'microphone', 'camera', 'desktop', 'chat',
+        'tileview', 'fullscreen', 'videoquality', 'filmstrip', 'settings', 'hangup'
+    ],
 }
 
 

@@ -1,6 +1,6 @@
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import admin
-from users.models import User
+from users.models import User, UserActivity
 
 
 class UserAdminManager(UserAdmin):
@@ -53,3 +53,10 @@ class UserAdminManager(UserAdmin):
 
 
 admin.site.register(User, UserAdminManager)
+
+@admin.register(UserActivity)
+class UserActivityAdmin(admin.ModelAdmin):
+    list_display = ("user", "action", "timestamp")
+    search_fields = ("user__email", "action")
+    list_filter = ("timestamp",)
+    ordering = ("-timestamp",)

@@ -13,7 +13,7 @@ from conferences.serializers import (ConferenceSerializer,
 from conferences.utils import ConferenceStatus
 # from conferences.email_invitations import send_mail_to_invited
 
-from users.models import User
+from users.models import User, UserActivity
 from users.serializers import UserSerializer
 from invitations.models import Invitation
 from invitations.utils import InvitationStatus
@@ -57,6 +57,16 @@ class ConferenceViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+    
+    def perform_create(self, serializer):
+        conference = serializer.save()
+        UserActivity.log_activity(self.request.user, f"Создал планируемую конференцию: {conference.title}")
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        UserActivity.log_activity(request.user, f"Удалил конференцию: {instance.title}")
+        return super().destroy(request, *args, **kwargs)
+
     
 
 class ConferenceChangeStatusView(APIView):
@@ -207,6 +217,7 @@ class RepetitiveConferenceCreateAPIView(APIView):
         serializer = RepetitiveConferenceCreateSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             conferences = serializer.save()
+            UserActivity.log_activity(request.user, f"Создание повторяющейся конференции {len(conferences)}")
             return JsonResponse(
                 ConferenceSerializer(conferences, many=True).data,
                 safe=False,
@@ -252,6 +263,7 @@ class FastConferenceAPIView(APIView):
         serializer = FastConferenceCreateSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             conference = serializer.save()
+            UserActivity.log_activity(request.user, f"Создание быстрой конференции: {conference.title}")
             return JsonResponse(
                 ConferenceSerializer(conference).data,
                 status=status_codes.HTTP_201_CREATED

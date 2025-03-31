@@ -18,6 +18,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Application definition
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -232,3 +233,11 @@ KC_CLIENT_SECRET=env('KEYCLOAK_CLIENT_SECRET')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+JAZZMIN_SETTINGS = {
+    "site_title": "Vision Admin",
+    "site_header": "VisionSpace",
+    "site_brand": "Vision",
+    "welcome_sign": "Добро пожаловать в VisionSpace!",
+    "copyright": "Vision ©",
+}

@@ -10,14 +10,16 @@ import {
   subMonths,
   startOfMonth,
   endOfMonth,
+  startOfDay,
   Locale,
 } from 'date-fns'
-import './index.scss'
+import './DateTimePicker.scss' // Или отдельный файл стилей
 
 type Props = {
   selected: Date
-  onChange: (date: Date) => any
+  onChange: (date: Date) => void
   locale?: Locale
+  // Начало недели (0 - воскресенье, 1 - понедельник и т.д.)
   weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6
 }
 
@@ -27,14 +29,12 @@ const DatePicker: React.FC<Props> = ({
   locale,
   weekStartsOn = 1,
 }) => {
+  // Месяц, который сейчас отображаем в календаре
   const [viewingDate, setViewingDate] = React.useState(selected)
 
-  const firstDayOfFirstWeek = startOfWeek(startOfMonth(viewingDate), {
-    weekStartsOn,
-  })
-  const lastDayOfFirstWeek = endOfWeek(startOfMonth(viewingDate), {
-    weekStartsOn,
-  })
+  // Определяем первую и последнюю неделю месяца
+  const firstDayOfFirstWeek = startOfWeek(startOfMonth(viewingDate), { weekStartsOn })
+  const lastDayOfFirstWeek = endOfWeek(startOfMonth(viewingDate), { weekStartsOn })
   const daysOfFirstWeek = eachDayOfInterval({
     start: firstDayOfFirstWeek,
     end: lastDayOfFirstWeek,
@@ -45,80 +45,80 @@ const DatePicker: React.FC<Props> = ({
     end: lastDayOfLastWeek,
   })
 
-  const handleChangeMonth = (changeToNextMonth = true) => {
-    const nextViewingDate = changeToNextMonth
-      ? addMonths(viewingDate, 1)
-      : subMonths(viewingDate, 1)
-
-    setViewingDate(() => nextViewingDate)
+  // Переход к предыдущему / следующему месяцу
+  const handleChangeMonth = (toNextMonth = true) => {
+    const next = toNextMonth ? addMonths(viewingDate, 1) : subMonths(viewingDate, 1)
+    setViewingDate(next)
   }
 
-  const handleChangeDate = (date: Date) => {
-    onChange(date)
+  const handleDateClick = (day: Date) => {
+    onChange(day)
   }
+
+  // "Сегодня" (полночь)
+  const today = startOfDay(new Date())
 
   return (
     <div className="date-picker">
       <div className="date-picker-header">
+        {/* Кнопка "предыдущий месяц" */}
         <button
           className="date-picker-btn date-picker-header-btn"
           onClick={() => handleChangeMonth(false)}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 16 16"
-            className="date-picker-header-btn-icon"
-          >
-            <path
-              fillRule="evenodd"
-              d="M9.78 12.78a.75.75 0 01-1.06 0L4.47 8.53a.75.75 0 010-1.06l4.25-4.25a.75.75 0 011.06 1.06L6.06 8l3.72 3.72a.75.75 0 010 1.06z"
-            ></path>
-          </svg>
+          &lt;
         </button>
+
         <div className="date-picker-header-title">
           {format(viewingDate, 'MMMM yyyy', { locale })}
         </div>
+
+        {/* Кнопка "следующий месяц" */}
         <button
           className="date-picker-btn date-picker-header-btn"
-          onClick={() => handleChangeMonth()}
+          onClick={() => handleChangeMonth(true)}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 16 16"
-            className="date-picker-header-btn-icon"
-          >
-            <path
-              fillRule="evenodd"
-              d="M6.22 3.22a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 010-1.06z"
-            ></path>
-          </svg>
+          &gt;
         </button>
       </div>
 
       <div className="date-picker-items">
+        {/* Шапка дней недели */}
         {daysOfFirstWeek.map(day => (
           <div
-            key={day.toString()}
+            key={'week-' + day.toString()}
             className="date-picker-item date-picker-item-weekday"
           >
             {format(day, 'EEEEEE', { locale })}
           </div>
         ))}
+
+        {/* Все дни в сетке календаря */}
         {daysInWeeksOfMonth.map(day => {
           const classes: string[] = ['date-picker-item', 'date-picker-btn']
 
-          if (isSameDay(day, selected)) classes.push('date-picker-item-current')
-
-          if (getMonth(day) !== getMonth(viewingDate))
+          // Если день совпадает с выбранным
+          if (isSameDay(day, selected)) {
+            classes.push('date-picker-item-current')
+          }
+          // Если день не в текущем месяце (серым)
+          if (getMonth(day) !== getMonth(viewingDate)) {
             classes.push('date-picker-item-outside-month')
+          }
+          // Запрещаем прошедшие даты: если day < today, то disabled
+          const isTodayOrFuture = startOfDay(day) >= today
+          if (!isTodayOrFuture) {
+            classes.push('date-picker-item-disabled')
+          }
 
           return (
             <button
               key={day.toString()}
               className={classes.join(' ')}
-              onClick={() => handleChangeDate(day)}
+              onClick={() => handleDateClick(day)}
+              disabled={!isTodayOrFuture}
             >
-              {format(day, 'd', { locale })}
+              {format(day, 'd')}
             </button>
           )
         })}

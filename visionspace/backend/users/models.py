@@ -7,6 +7,8 @@ from django.contrib.auth.models import (AbstractBaseUser,
                                         PermissionsMixin)
 from django.db import models
 
+from vision import settings
+
 from .utils import UserRole
 
 
@@ -123,3 +125,33 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self) -> str:
         return f"{self.firstname} {self.lastname}"
+
+
+class UserActivity(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='activities',
+        verbose_name="Пользователь"
+    )
+    action = models.CharField(max_length=255, verbose_name="Действие")
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Время")
+
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = "Активность пользователя"
+        verbose_name_plural = "Активности пользователей"
+
+    def __str__(self):
+        return f"{self.user.email} — {self.action} [{self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}]"
+
+    @staticmethod
+    def log_activity(user, action: str):
+        if user and user.is_authenticated:
+            UserActivity.objects.create(user=user, action=action)
+
+            # Удаляем старые, если больше 100
+            user_activities = UserActivity.objects.filter(user=user).order_by('-timestamp')
+            if user_activities.count() > 100:
+                to_delete = user_activities[100:]
+                UserActivity.objects.filter(id__in=[a.id for a in to_delete]).delete()

@@ -19,6 +19,7 @@ import SignUp from "pages/reg/page";
 import PrivateRoute from 'components/PrivateRoutes/privateRoute';
 import Dashboard from 'pages/dashboard/page';
 import NotFound from 'pages/errors/404/page';
+import ForgotPassword from 'pages/auth/forgotPassword';
 
 export const router = createBrowserRouter(
     createRoutesFromElements(
@@ -68,6 +69,9 @@ export const router = createBrowserRouter(
             <Route path="/sign-in" element={<Login />} />
             
             <Route path="/sign-up" element={<SignUp />} />
+
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+
         </>
     )
 );

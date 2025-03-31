@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
+from .models import User, UserActivity
+
 UserModel = get_user_model()
 
 
@@ -17,12 +19,24 @@ class BaseUserSerializer(serializers.ModelSerializer):
             'last_login',
         )
 
+class UserUpdateRoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserModel
+        fields = ['role']
 
-class UserSerializer(BaseUserSerializer):
-    """Сериализатор пользовательской модели."""
-
-    class Meta(BaseUserSerializer.Meta):
-        fields = BaseUserSerializer.Meta.fields + ('id',)
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'id',
+            'firstname',
+            'lastname',
+            'email',
+            'role',
+            'last_login',
+            'created_at',
+            'updated_at',
+        )
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -55,23 +69,7 @@ class UserLoginSerializer(serializers.Serializer):
             'password',
         )
 
-
-class KeycloakUserSerializer(BaseUserSerializer):
-    """Сериализатор пользовательской модели Keycloak."""
-
-    class Meta(BaseUserSerializer.Meta):
-        fields = BaseUserSerializer.Meta.fields + ('id',)
-
-
-class KeycloakLoginSerializer(serializers.Serializer):
-    """Сериализатор для входа в приложение через Keycloak."""
-
-    email = serializers.EmailField()
-    password = serializers.CharField()
-
-
-class KeycloakLogoutSerializer(serializers.Serializer):
-    """Сериализатор для выхода из приложения,
-    если пользователь входил через Keycloak."""
-
-    refresh_token = serializers.CharField()
+class UserActivitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserActivity
+        fields = ('action', 'timestamp')

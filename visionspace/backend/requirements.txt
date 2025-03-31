@@ -55,3 +55,4 @@ urllib3==2.2.2
 uuid==1.30
 zope.interface==7.0.3
 gunicorn
+django-jazzmin
