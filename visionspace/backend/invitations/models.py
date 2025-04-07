@@ -7,7 +7,6 @@ from invitations.utils import InvitationStatus
 from users.models import User
 from users.utils import UserRole
 
-
 class Invitation(models.Model):
     """Модель приглашений"""
     id = models.UUIDField(

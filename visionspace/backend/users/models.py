@@ -150,7 +150,6 @@ class UserActivity(models.Model):
         if user and user.is_authenticated:
             UserActivity.objects.create(user=user, action=action)
 
-            # Удаляем старые, если больше 100
             user_activities = UserActivity.objects.filter(user=user).order_by('-timestamp')
             if user_activities.count() > 100:
                 to_delete = user_activities[100:]

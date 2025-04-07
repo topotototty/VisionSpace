@@ -21,6 +21,14 @@ const Dashboard: React.FC = () => {
       {user.role === "MODERATOR" && (
         <div style={{ marginTop: "1rem" }}>
           <h2>Раздел для модераторов</h2>
+          <a
+            href="/api/admin/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+          >
+            Перейти в админ-панель
+          </a>
         </div>
       )}
 

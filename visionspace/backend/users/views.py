@@ -65,9 +65,19 @@ def register_view(request):
         if serializer.is_valid():
             user = serializer.save()
             UserActivity.log_activity(user, "Регистрация")
+
+            # Генерация токенов
+            tokens = RefreshToken.for_user(user)
+            access_token = str(tokens.access_token)
+            refresh_token = str(tokens)
+
             data = {
                 'user': UserSerializer(user).data,
-                'message': 'User created successfully'
+                'tokens': {
+                    'access': access_token,
+                    'refresh': refresh_token
+                },
+                'message': 'User created and authenticated successfully'
             }
             return JsonResponse(data, status=status.HTTP_201_CREATED)
 
