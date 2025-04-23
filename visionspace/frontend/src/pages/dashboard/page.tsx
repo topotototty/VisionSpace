@@ -1,26 +1,25 @@
-// src/pages/Dashboard.tsx
-
 import React from "react";
 import { useAuth } from "hooks/useAuth";
-// ... другие импорты ...
+import { useConferences } from "hooks/useConferences";
+import ConferenceAnalytics from "components/Analytics/ConferenceAnalytics";
 
 const Dashboard: React.FC = () => {
   const { user, loading } = useAuth();
+  const {
+    conferences,
+    loading: conferencesLoading,
+  } = useConferences();
 
-  if (loading) return <p>Загрузка...</p>;
-
-  // Если неавторизован
-  if (!user) {
-    return <p>Вы не авторизованы</p>;
-  }
+  if (loading || conferencesLoading) return <p>Загрузка...</p>;
+  if (!user) return <p>Вы не авторизованы</p>;
 
   return (
-    <section style={{ padding: "1rem" }}>
-      <h1>Панель администратора</h1>
+    <div className="w-full h-full min-h-screen p-4 overflow-y-auto">
+      <h1 className="text-2xl font-bold">Панель администратора</h1>
 
       {user.role === "MODERATOR" && (
-        <div style={{ marginTop: "1rem" }}>
-          <h2>Раздел для модераторов</h2>
+        <div className="mt-4">
+          <h2 className="text-lg font-semibold">Раздел для модераторов</h2>
           <a
             href="/api/admin/"
             target="_blank"
@@ -29,16 +28,20 @@ const Dashboard: React.FC = () => {
           >
             Перейти в админ-панель
           </a>
+
+          <div className="mt-6">
+              <ConferenceAnalytics conferences={conferences} />
+          </div>
         </div>
       )}
 
       {user.role === "TECH_SUPPORT" && (
         <div>
-          <h2>Раздел для техподдержки</h2>
+          <h2 className="text-lg font-semibold">Раздел для техподдержки</h2>
           <p>Здесь будет функционал для техподдержки...</p>
         </div>
       )}
-    </section>
+    </div>
   );
 };
 

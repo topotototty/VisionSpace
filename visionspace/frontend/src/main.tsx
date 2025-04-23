@@ -22,7 +22,7 @@ root.render(
       <InvitationsProvider>
         <>
           <RouterProvider router={router} />
-          <ToastContainer // <-- вот он
+          <ToastContainer
             position="bottom-right"
             autoClose={3000}
             hideProgressBar={false}
