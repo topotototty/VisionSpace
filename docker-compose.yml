@@ -12,6 +12,7 @@ services:
       - db
     volumes:
       - staticfiles:/app/staticfiles
+      - ./recordings:/app/visionspace/recordings
 
   frontend:
     build:
@@ -51,7 +52,42 @@ services:
     volumes:
       - minio_data:/data
 
+  grafana:
+    image: grafana/grafana
+    container_name: grafana_vision
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+  telegraf:
+    image: telegraf:1.30
+    container_name: telegraf_vision
+    depends_on:
+      - db
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    environment:
+      - HOST_PROC=/host/proc
+      - HOST_SYS=/host/sys
+      - HOST_ETC=/host/etc
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus_vision
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
 volumes:
   pgdata:
   minio_data:
   staticfiles:
+  grafana_data:

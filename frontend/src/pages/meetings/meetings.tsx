@@ -94,6 +94,7 @@ const Meetings = () => {
                     </div>
                 </div>
 
+
                 {/* Блок с конференциями */}
                 <div className="w-full h-full overflow-y-auto flex flex-col gap-4 pl-2">
                     {conferencesDict.size === 0 ? (

@@ -9,6 +9,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
+
 from users.serializers import UserActivitySerializer, UserSerializer, UserLoginSerializer, UserCreateSerializer
 from users.models import User, UserActivity
 from users.utils import json_reader, xml_reader, txt_reader
@@ -62,9 +65,19 @@ def register_view(request):
         if serializer.is_valid():
             user = serializer.save()
             UserActivity.log_activity(user, "Регистрация")
+
+            # Генерация токенов
+            tokens = RefreshToken.for_user(user)
+            access_token = str(tokens.access_token)
+            refresh_token = str(tokens)
+
             data = {
                 'user': UserSerializer(user).data,
-                'message': 'User created successfully'
+                'tokens': {
+                    'access': access_token,
+                    'refresh': refresh_token
+                },
+                'message': 'User created and authenticated successfully'
             }
             return JsonResponse(data, status=status.HTTP_201_CREATED)
 
@@ -77,10 +90,9 @@ def register_view(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
-    UserActivity.log_activity(request.user, "Выход из профиля")
+    UserActivity.log_activity(request.user, "Выход из профиля")  # добавлено
     logout(request)
     return JsonResponse({'message': 'User logged out successfully'}, status=status.HTTP_200_OK)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -199,11 +211,77 @@ class FileUploadView(APIView):
 @permission_classes([IsAuthenticated])
 def user_activity_view(request):
     try:
-        activities = UserActivity.objects.filter(user=request.user).order_by('-timestamp')[:20]
-        serializer = UserActivitySerializer(activities, many=True)
-        return JsonResponse(serializer.data, safe=False, status=status.HTTP_200_OK)
+        paginator = PageNumberPagination()
+        paginator.page_size = int(request.GET.get('page_size', 10))
+        queryset = UserActivity.objects.filter(user=request.user).order_by('-timestamp')
+
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = UserActivitySerializer(page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
+
     except Exception as e:
-        return JsonResponse({
+        return Response({
             'error': 'Ошибка при получении активности',
             'details': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password_view(request):
+    user = request.user
+    old_password = request.data.get("old_password")
+    new_password = request.data.get("new_password")
+
+    if not old_password or not new_password:
+        return JsonResponse(
+            {"error": "Оба поля обязательны"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if not user.check_password(old_password):
+        return JsonResponse(
+            {"error": "Неверный текущий пароль"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if len(new_password) < 8:
+        return JsonResponse(
+            {"error": "Новый пароль слишком короткий (минимум 8 символов)"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user.set_password(new_password)
+    user.save()
+
+    # Логирование действия
+    from users.models import UserActivity
+    UserActivity.log_activity(user, "Сменил пароль")
+
+    return JsonResponse({"message": "Пароль успешно изменён"}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password_simple_view(request):
+    email = request.data.get("email")
+    lastname = request.data.get("lastname")
+    new_password = request.data.get("new_password")
+
+    if not email or not lastname or not new_password:
+        return JsonResponse({"error": "Все поля обязательны"}, status=400)
+
+    try:
+        user = User.objects.get(email=email, lastname__iexact=lastname)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "Пользователь не найден"}, status=404)
+
+    if len(new_password) < 8:
+        return JsonResponse({"error": "Пароль слишком короткий (минимум 8 символов)"}, status=400)
+
+    user.set_password(new_password)
+    user.save()
+    UserActivity.log_activity(user, "Восстановил пароль (через фамилию и email)")
+
+    return JsonResponse({"message": "Пароль успешно изменён"}, status=200)

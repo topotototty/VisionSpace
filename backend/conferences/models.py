@@ -98,3 +98,12 @@ class Conference(models.Model):
         verbose_name_plural = "Конференции"
         ordering = ('-started_at',)
         db_table = "conferences"
+
+
+class Recording(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recordings')
+    file_url = models.URLField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Recording by {self.user.username} at {self.created_at}"

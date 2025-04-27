@@ -1,7 +1,7 @@
 import datetime as dt
 from django.utils import timezone
 from rest_framework import serializers
-from conferences.models import Conference, Event
+from conferences.models import Conference, Event, Recording
 from conferences.utils import ConferenceType
 from invitations.models import Invitation
 from users.models import User
@@ -246,3 +246,8 @@ class FastConferenceCreateSerializer(serializers.ModelSerializer):
 
         conference = Conference.objects.create(**validated_data, event=event)
         return conference
+
+class RecordingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recording
+        fields = ['id', 'file_url', 'created_at']

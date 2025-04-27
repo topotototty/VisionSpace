@@ -13,13 +13,23 @@ from conferences.serializers import (ConferenceSerializer,
 from conferences.utils import ConferenceStatus
 # from conferences.email_invitations import send_mail_to_invited
 
-from users.models import User
+from users.models import User, UserActivity
 from users.serializers import UserSerializer
 from invitations.models import Invitation
 from invitations.utils import InvitationStatus
 from services.jitsi_service import JitsiService
 
-# Новое
+import os
+import subprocess
+from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from .models import Recording
+from .serializers import RecordingSerializer
+from django.core.files.storage import default_storage
+
 from conferences.filters import ConferenceFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
@@ -57,6 +67,16 @@ class ConferenceViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+    
+    def perform_create(self, serializer):
+        conference = serializer.save()
+        UserActivity.log_activity(self.request.user, f"Создал планируемую конференцию: {conference.title}")
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        UserActivity.log_activity(request.user, f"Удалил конференцию: {instance.title}")
+        return super().destroy(request, *args, **kwargs)
+
     
 
 class ConferenceChangeStatusView(APIView):
@@ -207,6 +227,7 @@ class RepetitiveConferenceCreateAPIView(APIView):
         serializer = RepetitiveConferenceCreateSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             conferences = serializer.save()
+            UserActivity.log_activity(request.user, f"Создание повторяющейся конференции {len(conferences)}")
             return JsonResponse(
                 ConferenceSerializer(conferences, many=True).data,
                 safe=False,
@@ -252,6 +273,7 @@ class FastConferenceAPIView(APIView):
         serializer = FastConferenceCreateSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             conference = serializer.save()
+            UserActivity.log_activity(request.user, f"Создание быстрой конференции: {conference.title}")
             return JsonResponse(
                 ConferenceSerializer(conference).data,
                 status=status_codes.HTTP_201_CREATED
@@ -260,3 +282,58 @@ class FastConferenceAPIView(APIView):
             serializer.errors,
             status=status_codes.HTTP_400_BAD_REQUEST
         )
+    
+# backend/conferences/views.py
+import os
+import subprocess
+from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.response import Response
+from rest_framework import status, permissions
+
+class UploadRecordingView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({"error": "Файл не найден."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Путь к папке /visionspace/recordings
+        project_root = settings.BASE_DIR
+        recordings_dir = os.path.join(project_root, 'visionspace', 'recordings')
+        os.makedirs(recordings_dir, exist_ok=True)
+
+        # Сохраняем исходный webm
+        webm_path = os.path.join(recordings_dir, uploaded_file.name)
+        with open(webm_path, 'wb+') as destination:
+            for chunk in uploaded_file.chunks():
+                destination.write(chunk)
+
+        # Формируем путь для mp4
+        mp4_filename = f"{os.path.splitext(uploaded_file.name)[0]}.mp4"
+        mp4_path = os.path.join(recordings_dir, mp4_filename)
+
+        try:
+            # Конвертация webm -> mp4 через ffmpeg
+            subprocess.run([
+                'ffmpeg',
+                '-i', webm_path,
+                '-c:v', 'libx264',
+                '-preset', 'fast',
+                '-c:a', 'aac',
+                '-strict', 'experimental',
+                mp4_path
+            ], check=True)
+
+            # Удаляем исходный webm файл
+            if os.path.exists(webm_path):
+                os.remove(webm_path)
+
+            # Просто возвращаем 200 OK
+            return Response({"message": "Файл успешно сохранён."}, status=status.HTTP_200_OK)
+
+        except subprocess.CalledProcessError:
+            return Response({"error": "Ошибка конвертации видео."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

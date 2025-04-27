@@ -11,7 +11,7 @@ from invitations.serializers import InvitationSerializer
 from invitations.serializers import InvitationAcceptORDeclineSerializer
 from invitations.serializers import InvitationCreateSerializer
 
-from users.models import User
+from users.models import User, UserActivity
 
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
@@ -108,6 +108,7 @@ def accept_invitation_view(request):
             if invitation:
                 invitation.invitation_status = InvitationStatus.ACCEPTED
                 invitation.save()
+                UserActivity.log_activity(request.user, f"Принял приглашение на конференцию {invitation.conference.title}")
                 return JsonResponse(
                     {
                         'message': f'Invitation {invitation.id} accepted'
@@ -160,6 +161,7 @@ def decline_invitation_view(request):
             if invitation:
                 invitation.invitation_status = InvitationStatus.DECLINED
                 invitation.save()
+                UserActivity.log_activity(request.user, f"Отклонил приглашение на конференцию {invitation.conference.title}")
                 return JsonResponse(
                     {
                         'message': 'Invitation declined'
