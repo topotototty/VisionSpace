@@ -10,6 +10,12 @@ interface IUserActivity {
   action: string;
 }
 
+interface IRecording {
+  id: number;
+  file_url: string;
+  created_at: string;
+}
+
 interface IPasswordChangeForm {
   old_password: string;
   new_password: string;
@@ -19,9 +25,10 @@ const Profile = () => {
   const { user, loading: authLoading } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [activities, setActivities] = useState<IUserActivity[]>([]);
+  const [recordings, setRecordings] = useState<IRecording[]>([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"profile" | "security">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "security" | "recordings">("profile");
 
   const pageSize = 10;
 
@@ -45,6 +52,15 @@ const Profile = () => {
     }
   };
 
+  const getRecordings = async () => {
+    try {
+      const res = await apiClientWithAuth.get("recordings/");
+      setRecordings(res.data);
+    } catch (error) {
+      console.error("Ошибка загрузки записей", error);
+    }
+  };
+
   const handlePasswordChange = async (data: IPasswordChangeForm) => {
     try {
       await apiClientWithAuth.post("users/profile/change-password/", data);
@@ -58,6 +74,12 @@ const Profile = () => {
   useEffect(() => {
     getActivities(currentPage);
   }, [currentPage]);
+
+  useEffect(() => {
+    if (user) {
+      getRecordings();
+    }
+  }, [user]);
 
   const renderActivityList = () => {
     if (loading) return <span className="text-[16px] text-white/60">Загрузка активности...</span>;
@@ -99,6 +121,27 @@ const Profile = () => {
     );
   };
 
+  const renderRecordingsList = () => {
+    if (recordings.length === 0) {
+      return <span className="text-[16px] text-white/40">Нет загруженных записей</span>;
+    }
+
+    return (
+      <div className="flex flex-col gap-4 mt-4">
+        {recordings.map((rec) => (
+          <div key={rec.id} className="bg-gray-2 rounded-md p-3 border border-white/10">
+            <a href={rec.file_url} target="_blank" className="text-blue-1 font-semibold text-lg">
+              Скачать запись
+            </a>
+            <div className="text-white/60 text-xs mt-1">
+              Загружено: {new Date(rec.created_at).toLocaleString("ru-RU")}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   if (authLoading || !user) {
     return (
       <div className="h-full flex flex-col justify-center items-center">
@@ -122,6 +165,12 @@ const Profile = () => {
             onClick={() => setActiveTab("security")}
           >
             Безопасность
+          </li>
+          <li
+            className={`cursor-pointer hover:text-blue-1 ${activeTab === "recordings" ? 'text-blue-1' : ''}`}
+            onClick={() => setActiveTab("recordings")}
+          >
+            Мои записи
           </li>
         </ul>
       </div>
@@ -189,6 +238,8 @@ const Profile = () => {
             </form>
           </>
         )}
+
+        {activeTab === "recordings" && renderRecordingsList()}
       </div>
     </section>
   );

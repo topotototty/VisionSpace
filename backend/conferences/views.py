@@ -283,14 +283,18 @@ class FastConferenceAPIView(APIView):
             status=status_codes.HTTP_400_BAD_REQUEST
         )
     
-# backend/conferences/views.py
 import os
 import subprocess
 from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
+
+from storages.backends.s3boto3 import S3Boto3Storage
+from django.core.files.base import ContentFile
 
 class UploadRecordingView(APIView):
     parser_classes = (MultiPartParser, FormParser)
@@ -301,39 +305,50 @@ class UploadRecordingView(APIView):
         if not uploaded_file:
             return Response({"error": "Файл не найден."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Путь к папке /visionspace/recordings
-        project_root = settings.BASE_DIR
-        recordings_dir = os.path.join(project_root, 'visionspace', 'recordings')
-        os.makedirs(recordings_dir, exist_ok=True)
+        temp_dir = os.path.join(settings.BASE_DIR, 'tmp')
+        os.makedirs(temp_dir, exist_ok=True)
 
-        # Сохраняем исходный webm
-        webm_path = os.path.join(recordings_dir, uploaded_file.name)
-        with open(webm_path, 'wb+') as destination:
+        temp_webm_path = os.path.join(temp_dir, uploaded_file.name)
+
+        with open(temp_webm_path, 'wb+') as temp_file:
             for chunk in uploaded_file.chunks():
-                destination.write(chunk)
+                temp_file.write(chunk)
 
-        # Формируем путь для mp4
-        mp4_filename = f"{os.path.splitext(uploaded_file.name)[0]}.mp4"
-        mp4_path = os.path.join(recordings_dir, mp4_filename)
+        base_name = os.path.splitext(uploaded_file.name)[0]
+        temp_mp4_path = os.path.join(temp_dir, f"{base_name}.mp4")
 
         try:
-            # Конвертация webm -> mp4 через ffmpeg
             subprocess.run([
                 'ffmpeg',
-                '-i', webm_path,
+                '-i', temp_webm_path,
                 '-c:v', 'libx264',
-                '-preset', 'fast',
+                '-preset', 'veryfast',
+                '-crf', '28',
                 '-c:a', 'aac',
-                '-strict', 'experimental',
-                mp4_path
+                temp_mp4_path
             ], check=True)
 
-            # Удаляем исходный webm файл
-            if os.path.exists(webm_path):
-                os.remove(webm_path)
+            with open(temp_mp4_path, 'rb') as mp4_file:
+                mp4_content = mp4_file.read()
 
-            # Просто возвращаем 200 OK
-            return Response({"message": "Файл успешно сохранён."}, status=status.HTTP_200_OK)
+            s3_storage = S3Boto3Storage()
+            final_filename = f"recordings/{base_name}.mp4"
+            s3_storage.save(final_filename, ContentFile(mp4_content))
+
+            file_url = s3_storage.url(final_filename)
+
+            # Создаем запись в базе
+            Recording.objects.create(
+                user=request.user,
+                file_url=file_url
+            )
+
+            os.remove(temp_webm_path)
+            os.remove(temp_mp4_path)
+
+            return Response({"file_url": file_url}, status=status.HTTP_201_CREATED)
 
         except subprocess.CalledProcessError:
             return Response({"error": "Ошибка конвертации видео."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -106,4 +106,10 @@ class Recording(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Recording by {self.user.username} at {self.created_at}"
+        return f"Recording by {self.user.email} at {self.created_at}"
+    
+    class Meta:
+        app_label = 'conferences'
+        verbose_name = "Запись"
+        verbose_name_plural = "Записи"
+        db_table = "conferences_recording"

@@ -20,6 +20,8 @@ urlpatterns = [
     path("me/activities/", views.user_activity_view, name='user-activities'),
     path("profile/change-password/", views.change_password_view, name="change_password"),
     path("profile/reset-password/", views.reset_password_simple_view, name="reset-password"),
+    
+    path('recordings/', views.UserRecordingsListAPIView.as_view()),
 
 
     # Endpoint для импорта юзеров из файла в БД
