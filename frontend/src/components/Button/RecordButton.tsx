@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { apiClientWithAuth } from "services/api/service";
 
-export default function RecordButton() {
+interface RecordButtonProps {
+    setIsUploading: (uploading: boolean) => void;
+}
+
+export default function RecordButton({ setIsUploading }: RecordButtonProps) {
     const [isRecording, setIsRecording] = useState(false);
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -49,12 +53,12 @@ export default function RecordButton() {
                 formData.append('file', file);
 
                 try {
+                    setIsUploading(true);
                     await apiClientWithAuth.post('conferences/upload-recording/', formData, {
                         headers: {
                             'Content-Type': 'multipart/form-data',
                         },
                     });
-
                     alert('Файл успешно загружен.');
                 } catch (error: any) {
                     if (error.response) {
@@ -64,6 +68,8 @@ export default function RecordButton() {
                         console.error('Ошибка сети:', error);
                         alert(`Ошибка сети: ${error.message}`);
                     }
+                } finally {
+                    setIsUploading(false);
                 }
             };
 
@@ -98,20 +104,23 @@ export default function RecordButton() {
 
     return (
         <div className="flex flex-col items-center gap-2 m-4">
-            <button
-                onClick={handleClick}
-                className={`w-12 h-12 rounded-md flex items-center justify-center transition ${
-                    isRecording ? "bg-red-600 animate-pulse" : "bg-[#141414] hover:bg-[#2a2a2a]"
-                }`}
-                title={isRecording ? "Остановить запись" : "Начать запись"}
-            >
-                <div className="w-2 h-2 rounded-full bg-white" />
-            </button>
-            {isRecording && (
-                <div className="text-xs text-white opacity-70">
-                    {formatTime(elapsedSeconds)}
-                </div>
-            )}
+            <div className="flex items-center gap-4">
+                <button
+                    onClick={handleClick}
+                    className={`w-12 h-12 rounded-md flex items-center justify-center transition ${
+                        isRecording ? "bg-red-600 animate-pulse" : "bg-[#141414] hover:bg-[#2a2a2a]"
+                    }`}
+                    title={isRecording ? "Остановить запись" : "Начать запись"}
+                >
+                    <div className="w-2 h-2 rounded-full bg-white" />
+                </button>
+
+                {isRecording && (
+                    <div className="flex items-center gap-2 text-white text-sm opacity-70">
+                        <span>{formatTime(elapsedSeconds)}</span>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

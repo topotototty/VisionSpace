@@ -285,6 +285,7 @@ class FastConferenceAPIView(APIView):
     
 import os
 import subprocess
+import logging
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -294,7 +295,9 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 
 from storages.backends.s3boto3 import S3Boto3Storage
-from django.core.files.base import ContentFile
+from conferences.models import Recording
+
+logger = logging.getLogger(__name__)
 
 class UploadRecordingView(APIView):
     parser_classes = (MultiPartParser, FormParser)
@@ -305,20 +308,20 @@ class UploadRecordingView(APIView):
         if not uploaded_file:
             return Response({"error": "Файл не найден."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Временная папка
         temp_dir = os.path.join(settings.BASE_DIR, 'tmp')
         os.makedirs(temp_dir, exist_ok=True)
 
-        temp_webm_path = os.path.join(temp_dir, uploaded_file.name)
-
-        with open(temp_webm_path, 'wb+') as temp_file:
-            for chunk in uploaded_file.chunks():
-                temp_file.write(chunk)
-
         base_name = os.path.splitext(uploaded_file.name)[0]
+        temp_webm_path = os.path.join(temp_dir, f"{base_name}.webm")
         temp_mp4_path = os.path.join(temp_dir, f"{base_name}.mp4")
 
         try:
-            subprocess.run([
+            with open(temp_webm_path, 'wb+') as f:
+                for chunk in uploaded_file.chunks():
+                    f.write(chunk)
+
+            ffmpeg_command = [
                 'ffmpeg',
                 '-i', temp_webm_path,
                 '-c:v', 'libx264',
@@ -326,29 +329,36 @@ class UploadRecordingView(APIView):
                 '-crf', '28',
                 '-c:a', 'aac',
                 temp_mp4_path
-            ], check=True)
+            ]
+            result = subprocess.run(ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-            with open(temp_mp4_path, 'rb') as mp4_file:
-                mp4_content = mp4_file.read()
+            if result.returncode != 0:
+                logger.error(f"Ошибка ffmpeg: {result.stderr.decode()}")
+                return Response({"error": "Ошибка конвертации видео."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             s3_storage = S3Boto3Storage()
             final_filename = f"recordings/{base_name}.mp4"
-            s3_storage.save(final_filename, ContentFile(mp4_content))
+            with open(temp_mp4_path, 'rb') as mp4_file:
+                s3_storage.save(final_filename, mp4_file)
 
             file_url = s3_storage.url(final_filename)
 
-            # Создаем запись в базе
             Recording.objects.create(
                 user=request.user,
                 file_url=file_url
             )
 
-            os.remove(temp_webm_path)
-            os.remove(temp_mp4_path)
-
             return Response({"file_url": file_url}, status=status.HTTP_201_CREATED)
 
-        except subprocess.CalledProcessError:
-            return Response({"error": "Ошибка конвертации видео."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
+            logger.exception("Ошибка при загрузке записи")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        finally:
+            # 6. Убираем временные файлы всегда, даже если ошибка
+            for path in [temp_webm_path, temp_mp4_path]:
+                if os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except Exception as cleanup_error:
+                        logger.warning(f"Не удалось удалить {path}: {cleanup_error}")

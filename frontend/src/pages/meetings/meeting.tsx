@@ -13,26 +13,27 @@ import RecordButton from "components/Button/RecordButton";
 
 const Meeting = () => {
     const { id } = useParams() as { id: string };
-    const [loadingMessage, setLoadingMessage] = useState<string>("Загрузка...");
-    const [errorMessage, setErrorMessage] = useState<string>("");
-    const [isStarted, setIsStarted] = useState<boolean>(false);
-    const [token, setToken] = useState<string>("");
-    const config = jistiConfigOverwrite;
-    const { user, loading } = useAuth();
     const navigate = useNavigate();
+    const { user, loading } = useAuth();
     const { setActive } = useConferences();
-    const [userTemp, setUserTemp] = useState<IUser | null>(
-        JSON.parse(localStorage.getItem("userTemp") as string) || null
-    );
-    const [loginModal, setLoginModal] = useState<boolean>(false);
+
+    const [loadingMessage, setLoadingMessage] = useState("Загрузка...");
+    const [errorMessage, setErrorMessage] = useState("");
+    const [isStarted, setIsStarted] = useState(false);
+    const [token, setToken] = useState("");
+    const [userTemp, setUserTemp] = useState<IUser | null>(JSON.parse(localStorage.getItem("userTemp") || "null"));
+    const [loginModal, setLoginModal] = useState(false);
+    const [isUploadingRecording, setIsUploadingRecording] = useState(false);
+
+    const config = jistiConfigOverwrite;
 
     const checkUserAuth = useCallback(() => {
-        const userTemp = localStorage.getItem("userTemp");
+        const tempUser = localStorage.getItem("userTemp");
         if (loading) return false;
-        if (user || userTemp) return true;
+        if (user || tempUser) return true;
         setLoginModal(true);
         return false;
-    }, [user, userTemp, loading]);
+    }, [user, loading]);
 
     const getRoomToken = useCallback(() => {
         if (!(user || userTemp)) return;
@@ -40,48 +41,44 @@ const Meeting = () => {
             ? ConferencesService.getConferenceToken(id)
             : ConferencesService.getConferenceTokenAsGuest(id, userTemp!.firstname);
 
-        fetchToken.then(({ conference: conf, token: token }) => {
+        fetchToken.then(({ conference, token }) => {
             setToken(token);
             setIsStarted(true);
-            config.subject = conf.title;
-        }).catch(error => {
-            console.error(error);
-        });
+            config.subject = conference.title;
+        }).catch(console.error);
     }, [id, user, userTemp]);
 
     const getRoom = useCallback(() => {
-        ConferencesService.getConferenceById(id).then(
-            ({ conference }) => {
+        ConferencesService.getConferenceById(id)
+            .then(({ conference }) => {
                 switch (conference.status) {
                     case "CREATED":
                         setLoadingMessage("Ожидание начала конференции");
                         if (user && conference.creator.id === user.id) {
                             setActive(conference.id);
                         }
-                        return;
-                    case "FINISHED":
-                        setErrorMessage("Конференция завершена");
-                        return;
-                    case "CANCELED":
-                        setErrorMessage("Конференция отменена организатором");
-                        return;
+                        break;
                     case "STARTED":
                         setLoadingMessage("Подключение к конференции");
                         getRoomToken();
-                        return;
+                        break;
+                    case "FINISHED":
+                        setErrorMessage("Конференция завершена");
+                        break;
+                    case "CANCELED":
+                        setErrorMessage("Конференция отменена организатором");
+                        break;
                 }
-            }
-        ).catch(error => {
-            if (error.response?.status === 401) {
-                console.log("Ошибка авторизации");
-            }
-        });
+            })
+            .catch(error => {
+                if (error.response?.status === 401) {
+                    console.log("Ошибка авторизации");
+                }
+            });
     }, [id, user]);
 
     const checkRoom = () => {
-        if ((user || userTemp) && isStarted && token) {
-            return;
-        } else {
+        if (!(user || userTemp) || !isStarted || !token) {
             getRoom();
         }
     };
@@ -91,17 +88,11 @@ const Meeting = () => {
         if (!checkUserAuth()) return;
 
         checkRoom();
-        const getDataInterval = setInterval(() => {
-            checkRoom();
-        }, 5000);
-
-        return () => clearInterval(getDataInterval);
+        const interval = setInterval(() => checkRoom(), 5000);
+        return () => clearInterval(interval);
     }, [id, loading, user, userTemp, isStarted, token]);
 
-    const onApiReady = useCallback(() => {
-        // Пока ничего не ловим, потому что записи через стандартную кнопку больше нет
-    }, []);
-    
+    const onApiReady = useCallback(() => {}, []);
 
     if (loginModal) {
         return (
@@ -119,17 +110,11 @@ const Meeting = () => {
 
     if (!isStarted || !token) {
         return (
-            <div className="w-screen h-screen flex flex-col justify-center items-center">
-                <div className="w-[500px] h-[400px] bg-gray-1 border-[0.01px] border-gray-3 border-opacity-10 rounded-[20px] flex flex-col justify-between items-center pt-[4.5rem] pb-5 max-md:pt-[4.8rem] max-md:w-[400px] max-md:h-[400px] max-sm:pt-[3rem] max-sm:w-[290px] max-sm:h-[350px]">
-                    <h1 className="text-2xl font-bold max-2xl:text-3xl max-md:text-xl max-sm:text-xl max-sm:px-4">
-                        Ожидание организатора
-                    </h1>
-                    <div className="flex flex-col justify-center items-center w-[150px] h-[150px]">
-                        <Loader text={loadingMessage} />
-                    </div>
-                    <div className="text-[12px] text-white text-opacity-35 cursor-pointer max-sm:text-[10px]">
-                        ID: {id}
-                    </div>
+            <div className="w-screen h-screen flex items-center justify-center">
+                <div className="w-[400px] h-[300px] bg-gray-1 border border-gray-3 border-opacity-10 rounded-2xl flex flex-col items-center justify-around p-6 text-center">
+                    <h1 className="text-xl font-bold">Ожидание организатора</h1>
+                    <Loader text={loadingMessage} />
+                    <div className="text-xs text-white/40">ID: {id}</div>
                 </div>
             </div>
         );
@@ -138,11 +123,9 @@ const Meeting = () => {
     if (errorMessage) {
         return (
             <div className="w-screen h-screen flex flex-col justify-center items-center">
-                <div className="text-extrabold text-4xl max-sm:text-[18px] white text-opacity-85 m-0">
-                    {errorMessage}
-                </div>
+                <div className="text-4xl text-white/85">{errorMessage}</div>
                 <Button
-                    onClick={() => window.location.href = "/meetings"}
+                    onClick={() => navigate("/meetings")}
                     className="mt-5 bg-transparent text-red-500"
                 >
                     Вернуться
@@ -153,36 +136,37 @@ const Meeting = () => {
 
     return (
         <div className="relative w-screen h-screen">
-            {/* Кастомная кнопка записи */}
+
+            {isUploadingRecording && (
+                <div className="absolute bottom-3 left-4 z-50 bg-gray-2 px-3 py-1 rounded-lg shadow text-xs text-white">
+                    Идёт загрузка...
+                </div>
+            )}
+
+            {/* Кнопка записи */}
             <div className="absolute bottom-4 left-4 z-50">
-                <RecordButton />
+                <RecordButton setIsUploading={setIsUploadingRecording} />
             </div>
-            
-            {/* Сам Jitsi */}
+
+            {/* Конференция */}
             <JitsiMeeting
                 lang="ru"
                 jwt={token}
                 domain={jitsiDomain}
                 roomName={id}
-                onReadyToClose={() => {
-                    if (user) navigate("/meetings");
-                    else navigate("/");
-                }}
+                onReadyToClose={() => navigate(user ? "/meetings" : "/")}
                 getIFrameRef={(iframeRef) => {
                     iframeRef.style.height = '100vh';
                     iframeRef.style.width = '100%';
                     iframeRef.style.zIndex = '10';
                 }}
-                configOverwrite={{
-                    ...config,
-                    startRecording: false,
-                }}
+                configOverwrite={{ ...config, startRecording: false }}
                 interfaceConfigOverwrite={{
                     ...jistiInterfaceConfigOverwrite,
                     TOOLBAR_BUTTONS: [
-                        'microphone', 'camera', 'desktop', 'chat',
-                        'tileview', 'fullscreen', 'videoquality', 'filmstrip', 'settings', 'hangup'
-                    ],
+                        'microphone', 'camera', 'desktop', 'chat', 'tileview',
+                        'fullscreen', 'videoquality', 'filmstrip', 'settings', 'hangup'
+                    ]
                 }}
                 onApiReady={onApiReady}
             />
