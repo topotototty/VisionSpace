@@ -291,7 +291,6 @@ const Profile = () => {
                     ))}
                   </ul>
 
-
                   <div className="flex justify-center items-center gap-2 mt-2">
                     <button
                       onClick={() => setRecordingsPage(p => Math.max(1, p - 1))}
