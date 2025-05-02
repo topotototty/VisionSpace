@@ -5,6 +5,8 @@ import { apiClientWithAuth } from "services/api/service";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import RecordingService from "services/recording/service";
+import { Copy, Trash } from "lucide-react";
+
 
 interface IUserActivity {
   timestamp: string;
@@ -249,17 +251,11 @@ const Profile = () => {
                                 navigator.clipboard.writeText(rec.file_url);
                                 toast.success("Ссылка скопирована!");
                               }}
-                              className="text-sm bg-gray-3 hover:bg-gray-4 transition px-3 py-1 rounded text-white font-semibold"
+                              className="bg-gray-4 hover:bg-gray-5 p-2 rounded text-white transition"
+                              title="Скопировать ссылку"
                             >
-                              📋 Скопировать
+                              <Copy size={18} />
                             </button>
-                            <a
-                              href={rec.file_url}
-                              download
-                              className="text-sm bg-blue-1 hover:bg-blue-2 transition px-3 py-1 rounded text-white font-semibold"
-                            >
-                              ⬇ Скачать
-                            </a>
                             <button
                               onClick={async () => {
                                 if (window.confirm("Удалить запись?")) {
@@ -272,11 +268,13 @@ const Profile = () => {
                                   }
                                 }
                               }}
-                              className="text-sm bg-red-600 hover:bg-red-700 transition px-3 py-1 rounded text-white font-semibold"
+                              className="bg-red-600 hover:bg-red-700 p-2 rounded text-white transition"
+                              title="Удалить запись"
                             >
-                              🗑 Удалить
+                              <Trash size={18} />
                             </button>
                           </div>
+
                         </div>
 
                         <div className="w-full">

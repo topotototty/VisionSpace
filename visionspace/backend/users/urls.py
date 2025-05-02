@@ -22,6 +22,9 @@ urlpatterns = [
     path("profile/reset-password/", views.reset_password_simple_view, name="reset-password"),
     
     path("recordings/", views.user_recordings_view, name="user_recordings"),
+    
+    path("recordings/<int:pk>/", views.delete_user_recording_view, name="user-recording-delete"),
+
     # Endpoint для импорта юзеров из файла в БД
     path('import/file/', views.FileUploadView.as_view(), name='import from file'),
 ]

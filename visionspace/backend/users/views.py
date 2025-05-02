@@ -302,3 +302,15 @@ def user_recordings_view(request):
     serializer = RecordingSerializer(page, many=True)
 
     return paginator.get_paginated_response(serializer.data)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_user_recording_view(request, pk):
+    try:
+        recording = Recording.objects.get(pk=pk, user=request.user)
+        recording.delete()
+        return Response({"detail": "Запись удалена."}, status=status.HTTP_204_NO_CONTENT)
+    except Recording.DoesNotExist:
+        return Response({"detail": "Запись не найдена."}, status=status.HTTP_404_NOT_FOUND)
+
