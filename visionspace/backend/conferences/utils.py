@@ -16,7 +16,7 @@ class ConferenceStatus(models.TextChoices):
     - created: создана
     - started: запущена
     - finished: завершена
-    - canceled: отменена
+    - сanceled: отменена
     """
 
     CREATED = 'CREATED', ('Created')

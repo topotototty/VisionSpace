@@ -56,3 +56,8 @@ uuid==1.30
 zope.interface==7.0.3
 gunicorn
 django-jazzmin
+django-storages
+boto3
+minio>=7.1.14
+
+

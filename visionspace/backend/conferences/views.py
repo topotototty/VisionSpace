@@ -19,7 +19,17 @@ from invitations.models import Invitation
 from invitations.utils import InvitationStatus
 from services.jitsi_service import JitsiService
 
-# Новое
+import os
+import subprocess
+from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from .models import Recording
+from .serializers import RecordingSerializer
+from django.core.files.storage import default_storage
+
 from conferences.filters import ConferenceFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
@@ -64,8 +74,19 @@ class ConferenceViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+
+        if instance.status == ConferenceStatus.CREATED:
+            instance.status = ConferenceStatus.CANCELED
+            instance.save()
+            UserActivity.log_activity(request.user, f"Отменил конференцию: {instance.title}")
+            return JsonResponse(
+                {"detail": "Конференция отменена", "id": instance.id, "status": instance.status},
+                status=status_codes.HTTP_200_OK
+            )
+
         UserActivity.log_activity(request.user, f"Удалил конференцию: {instance.title}")
         return super().destroy(request, *args, **kwargs)
+
 
     
 
@@ -93,8 +114,7 @@ class ConferenceChangeStatusView(APIView):
                 )
 
             if status not in [ConferenceStatus.STARTED,
-                                ConferenceStatus.FINISHED,
-                                ConferenceStatus.CANCELED]:
+                                ConferenceStatus.FINISHED]:
                 return JsonResponse(
                     {'error': 'Неверный статус конференции'},
                     status=status_codes.HTTP_400_BAD_REQUEST
@@ -172,7 +192,6 @@ class ConferenceDetailAPIView(APIView):
 
 
             if conference.status in [ConferenceStatus.FINISHED,
-                                     ConferenceStatus.CANCELED,
                                      ConferenceStatus.CREATED]:
                 return JsonResponse(
                     {
@@ -272,3 +291,89 @@ class FastConferenceAPIView(APIView):
             serializer.errors,
             status=status_codes.HTTP_400_BAD_REQUEST
         )
+    
+import os
+import subprocess
+import logging
+from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.response import Response
+from rest_framework import status, permissions
+
+from storages.backends.s3boto3 import S3Boto3Storage
+from conferences.models import Recording
+
+logger = logging.getLogger(__name__)
+
+class UploadRecordingView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({"error": "Файл не найден."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Временная папка
+        temp_dir = os.path.join(settings.BASE_DIR, 'tmp')
+        os.makedirs(temp_dir, exist_ok=True)
+
+        base_name = os.path.splitext(uploaded_file.name)[0]
+        temp_webm_path = os.path.join(temp_dir, f"{base_name}.webm")
+        temp_mp4_path = os.path.join(temp_dir, f"{base_name}.mp4")
+
+        try:
+            with open(temp_webm_path, 'wb+') as f:
+                for chunk in uploaded_file.chunks():
+                    f.write(chunk)
+
+            ffmpeg_command = [
+                'ffmpeg',
+                '-y',
+                '-i', temp_webm_path,
+                '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+                '-c:v', 'libx264',
+                '-preset', 'veryfast',
+                '-crf', '28',
+                '-c:a', 'aac',
+                '-movflags', 'faststart',
+                temp_mp4_path
+            ]
+
+            result = subprocess.run(ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            if result.returncode != 0:
+                logger.error(f"Ошибка ffmpeg: {result.stderr.decode()}")
+                return Response({"error": "Ошибка конвертации видео."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            s3_storage = S3Boto3Storage()
+            final_filename = f"recordings/{base_name}.mp4"
+            with open(temp_mp4_path, 'rb') as mp4_file:
+                s3_storage.save(final_filename, mp4_file)
+
+            final_filename = f"recordings/{base_name}.mp4"
+            file_url = f"http://localhost:9000/vision-recordings/{final_filename}"
+
+            Recording.objects.create(
+                user=request.user,
+                file_url=file_url
+            )
+
+            return Response({"file_url": file_url}, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            logger.exception("Ошибка при загрузке записи")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        finally:
+            # 6. Убираем временные файлы всегда, даже если ошибка
+            for path in [temp_webm_path, temp_mp4_path]:
+                if os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except Exception as cleanup_error:
+                        logger.warning(f"Не удалось удалить {path}: {cleanup_error}")
+

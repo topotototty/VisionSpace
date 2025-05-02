@@ -50,7 +50,7 @@ import {
             defaultPopupValue={new Date()}
             onChange={(date) => {
                 const now = new Date();
-                now.setSeconds(0, 0); // округляем "текущий момент" до минуты
+                now.setSeconds(0, 0);
                 if (date && date < now) {
                 toast.error("Нельзя выбрать прошедшую дату и время");
                 return;

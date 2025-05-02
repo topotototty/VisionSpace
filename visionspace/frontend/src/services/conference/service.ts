@@ -3,15 +3,6 @@ import { apiClient, apiClientWithAuth } from "services/api/service";
 
 
 class ConferencesService { 
-    // public join = (id: string) => {
-    //     const join_url = `${location.href}/meeting/${id}`
-    //     window.open(
-    //         join_url, '_blank',
-    //         'toolbar=0,location=0,menubar=0,height=720,width=1080,'
-    //     )
-    // }
-
-
     // Получение всех конференций пользователя
     public getConferences = async (): Promise<IConference[]> => {
         return await apiClientWithAuth.get(
@@ -103,7 +94,7 @@ class ConferencesService {
             `conferences/status/${id}/${status}/`,
             {}
         ).then(response => response.data).catch(error => console.log(error))
-    }
+    }    
 }
 
 

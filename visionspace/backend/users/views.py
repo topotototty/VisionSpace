@@ -15,6 +15,9 @@ from rest_framework.pagination import PageNumberPagination
 from users.serializers import UserActivitySerializer, UserSerializer, UserLoginSerializer, UserCreateSerializer
 from users.models import User, UserActivity
 from users.utils import json_reader, xml_reader, txt_reader
+from conferences.models import Recording
+from conferences.serializers import RecordingSerializer
+from rest_framework import permissions
 
 
 @api_view(['POST'])
@@ -285,3 +288,17 @@ def reset_password_simple_view(request):
     UserActivity.log_activity(user, "Восстановил пароль (через фамилию и email)")
 
     return JsonResponse({"message": "Пароль успешно изменён"}, status=200)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_recordings_view(request):
+    paginator = PageNumberPagination()
+    paginator.page_size = int(request.GET.get('page_size', 10))
+
+    queryset = Recording.objects.filter(user=request.user).order_by('-created_at')
+    page = paginator.paginate_queryset(queryset, request)
+    serializer = RecordingSerializer(page, many=True)
+
+    return paginator.get_paginated_response(serializer.data)

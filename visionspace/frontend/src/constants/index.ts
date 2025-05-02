@@ -104,7 +104,8 @@ export const jistiInterfaceConfigOverwrite = {
 
     TOOLBAR_BUTTONS: [
         'microphone', 'camera', 'desktop', 'chat',
-        'tileview', 'fullscreen', 'videoquality', 'filmstrip', 'settings', 'hangup'
+        'tileview', 'fullscreen', 'videoquality', 
+        'filmstrip', 'settings', 'hangup'
     ],
 }
 

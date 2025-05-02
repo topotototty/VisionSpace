@@ -22,6 +22,9 @@ urlpatterns = [
     # Endpoints для просмотра информации о конференции
     path('id/<uuid:id>/', views.ConferenceDetailAPIView.as_view()),
 
+    # Endpoints для загрузки записи конференции
+    path('upload-recording/', views.UploadRecordingView.as_view()),
+    
     # Endpoints для получения информации о конференциях и создания новых
     path('', include(router.urls)),
 ]

@@ -12,6 +12,8 @@ services:
       - db
     volumes:
       - staticfiles:/app/staticfiles
+      - ./recordings:/app/visionspace/recordings
+    command: gunicorn vision.wsgi:application --bind 0.0.0.0:8000 --timeout 1800
 
   frontend:
     build:
@@ -51,21 +53,6 @@ services:
     volumes:
       - minio_data:/data
 
-  influxdb:
-    image: influxdb:2.7
-    container_name: influxdb_vision
-    ports:
-      - "8086:8086"
-    volumes:
-      - influxdb_data:/var/lib/influxdb2
-    environment:
-      DOCKER_INFLUXDB_INIT_MODE: setup
-      DOCKER_INFLUXDB_INIT_USERNAME: admin
-      DOCKER_INFLUXDB_INIT_PASSWORD: adminpass
-      DOCKER_INFLUXDB_INIT_ORG: vision_org
-      DOCKER_INFLUXDB_INIT_BUCKET: vision_bucket
-      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: secret_token
-
   grafana:
     image: grafana/grafana
     container_name: grafana_vision
@@ -73,18 +60,18 @@ services:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
     depends_on:
-      - influxdb
+      - prometheus
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
-  
+
   telegraf:
     image: telegraf:1.30
     container_name: telegraf_vision
     depends_on:
       - db
-      - influxdb
     volumes:
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     environment:
@@ -92,9 +79,16 @@ services:
       - HOST_SYS=/host/sys
       - HOST_ETC=/host/etc
 
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus_vision
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
 volumes:
   pgdata:
   minio_data:
   staticfiles:
-  influxdb_data:
   grafana_data:

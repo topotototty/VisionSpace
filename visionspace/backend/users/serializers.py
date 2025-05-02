@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
+from conferences.models import Recording
+from conferences.serializers import RecordingSerializer
+from rest_framework import generics, permissions
+
 from .models import User, UserActivity
 
 UserModel = get_user_model()
@@ -73,3 +77,11 @@ class UserActivitySerializer(serializers.ModelSerializer):
     class Meta:
         model = UserActivity
         fields = ('action', 'timestamp')
+
+
+class UserRecordingsListAPIView(generics.ListAPIView):
+    serializer_class = RecordingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Recording.objects.filter(user=self.request.user).order_by('-created_at')

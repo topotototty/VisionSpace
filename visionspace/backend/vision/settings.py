@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'users',
     # 'logs',
     'plugins',
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -241,3 +242,21 @@ JAZZMIN_SETTINGS = {
     "welcome_sign": "Добро пожаловать в VisionSpace!",
     "copyright": "Vision ©",
 }
+
+
+AWS_ACCESS_KEY_ID = 'minioadmin'
+AWS_SECRET_ACCESS_KEY = 'minioadmin'
+AWS_STORAGE_BUCKET_NAME = 'vision-recordings' 
+AWS_S3_REGION_NAME = 'us-east-1'
+AWS_QUERYSTRING_AUTH = False
+AWS_S3_ADDRESSING_STYLE = "path"
+AWS_S3_ENDPOINT_URL = "http://minio:9000"
+AWS_S3_CUSTOM_DOMAIN = "localhost:9000"
+
+import os
+
+MINIO_ADDRESS = os.getenv("MINIO_ADDRESS", "minio:9000")
+MINIO_EXTERNAL_HOST = os.getenv("MINIO_EXTERNAL_HOST", "http://127.0.0.1:9000")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+
